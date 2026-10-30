@@ -12,7 +12,7 @@ export function createVisionGateway() {
   const openai = createOpenAI({
     baseURL: "https://ai.gateway.lovable.dev/v1",
     apiKey,
-    headers: { "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
+    headers: { "Lovable-API-Key": apiKey, "X-Lovable-AIG-SDK": "vercel-ai-sdk" },
     fetch: runIdFetch.fetch,
   });
   return { model: openai.responses("openai/gpt-6-astra"), runIdFetch };
