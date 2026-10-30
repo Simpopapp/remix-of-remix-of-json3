@@ -1,12 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { listRestaurants } from "@/lib/functions/restaurants.functions";
-import { createBatch } from "@/lib/functions/batch.functions";
-import { advanceRestaurant } from "@/lib/functions/tick.functions";
-import { registerUploadedImage } from "@/lib/functions/images.functions";
-import { MENU_IMAGES_BUCKET, type RestaurantRow } from "@/lib/contracts/types";
+import { listRestaurants, createBatch, advanceRestaurant, uploadGuestFiles } from "@/lib/guest-api";
+import type { RestaurantRow } from "@/lib/contracts/types";
 import { STATUS_LABEL } from "@/lib/contracts/pipeline";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -53,6 +49,7 @@ function DashboardPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const advancingRef = useRef(false);
+  useEffect(() => { void queryClient.invalidateQueries({ queryKey: ["restaurants"] }); }, [queryClient]);
 
   // Retorno de login social: destino salvo na /auth.
   useEffect(() => {
@@ -108,15 +105,7 @@ function DashboardPage() {
     <div className="mx-auto min-h-dvh max-w-5xl px-4 py-8">
       <header className="flex items-center justify-between">
         <h1 className="font-serif text-3xl font-semibold">Meus restaurantes</h1>
-        <Button
-          variant="outline"
-          onClick={async () => {
-            await supabase.auth.signOut();
-            await navigate({ to: "/auth" });
-          }}
-        >
-          Sair
-        </Button>
+        <span className="text-sm text-muted-foreground">MapsMenu</span>
       </header>
 
       <Card className="mt-6">
@@ -170,18 +159,7 @@ function RestaurantCard({ restaurant }: { restaurant: RestaurantRow }) {
     if (!files || files.length === 0) return;
     setUploading(true);
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error("Sessão expirada");
-      for (const file of files) {
-        const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-        const path = `${user.user.id}/${restaurant.id}/${crypto.randomUUID()}.${ext}`;
-        const { error } = await supabase.storage.from(MENU_IMAGES_BUCKET).upload(path, file, {
-          contentType: file.type || "image/jpeg",
-        });
-        if (error) throw error;
-        await registerUploadedImage({ data: { restaurantId: restaurant.id, storagePath: path } });
-      }
-      await advanceRestaurant({ data: { restaurantId: restaurant.id } });
+      await uploadGuestFiles(restaurant.id, Array.from(files));
       await queryClient.invalidateQueries({ queryKey: ["restaurants"] });
     } catch (e) {
       alert(e instanceof Error ? e.message : "Falha no envio das imagens");
