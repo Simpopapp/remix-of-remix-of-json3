@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export const Route = createFileRoute("/_authenticated/restaurant/$id")({
+export const Route = createFileRoute("/restaurant/$id")({
   head: (ctx) => {
     const restaurant = (ctx.loaderData as { restaurant?: { name: string } } | undefined)?.restaurant;
     const title = restaurant ? `Revisão — ${restaurant.name}` : "Revisão — MapsMenu";
