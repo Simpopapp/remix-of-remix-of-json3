@@ -1,12 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { queryOptions, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { listRestaurants } from "@/lib/functions/restaurants.functions";
-import { createBatch } from "@/lib/functions/batch.functions";
-import { advanceRestaurant } from "@/lib/functions/tick.functions";
-import { registerUploadedImage } from "@/lib/functions/images.functions";
-import { MENU_IMAGES_BUCKET, type RestaurantRow } from "@/lib/contracts/types";
+import { listRestaurants, createBatch, advanceRestaurant, uploadGuestFiles } from "@/lib/guest-api";
+import type { RestaurantRow } from "@/lib/contracts/types";
 import { STATUS_LABEL } from "@/lib/contracts/pipeline";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
-export const Route = createFileRoute("/_authenticated/dashboard")({
+export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
       { title: "Meus restaurantes — MapsMenu" },
@@ -53,6 +49,7 @@ function DashboardPage() {
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const advancingRef = useRef(false);
+  useEffect(() => { void queryClient.invalidateQueries({ queryKey: ["restaurants"] }); }, [queryClient]);
 
   // Retorno de login social: destino salvo na /auth.
   useEffect(() => {
@@ -108,15 +105,7 @@ function DashboardPage() {
     <div className="mx-auto min-h-dvh max-w-5xl px-4 py-8">
       <header className="flex items-center justify-between">
         <h1 className="font-serif text-3xl font-semibold">Meus restaurantes</h1>
-        <Button
-          variant="outline"
-          onClick={async () => {
-            await supabase.auth.signOut();
-            await navigate({ to: "/auth" });
-          }}
-        >
-          Sair
-        </Button>
+        <span className="text-sm text-muted-foreground">MapsMenu</span>
       </header>
 
       <Card className="mt-6">
@@ -164,27 +153,18 @@ function RestaurantCard({ restaurant }: { restaurant: RestaurantRow }) {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const canReview = restaurant.status === "aguardando_revisao" || restaurant.status === "concluido";
 
   async function handleUpload(files: FileList | null) {
     if (!files || files.length === 0) return;
     setUploading(true);
+    setUploadError(null);
     try {
-      const { data: user } = await supabase.auth.getUser();
-      if (!user.user) throw new Error("Sessão expirada");
-      for (const file of files) {
-        const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-        const path = `${user.user.id}/${restaurant.id}/${crypto.randomUUID()}.${ext}`;
-        const { error } = await supabase.storage.from(MENU_IMAGES_BUCKET).upload(path, file, {
-          contentType: file.type || "image/jpeg",
-        });
-        if (error) throw error;
-        await registerUploadedImage({ data: { restaurantId: restaurant.id, storagePath: path } });
-      }
-      await advanceRestaurant({ data: { restaurantId: restaurant.id } });
+      await uploadGuestFiles(restaurant.id, Array.from(files));
       await queryClient.invalidateQueries({ queryKey: ["restaurants"] });
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Falha no envio das imagens");
+      setUploadError(e instanceof Error ? e.message : "Falha no envio das imagens");
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -203,6 +183,7 @@ function RestaurantCard({ restaurant }: { restaurant: RestaurantRow }) {
         </Badge>
       </CardHeader>
       <CardContent className="flex flex-wrap items-center gap-2">
+        {uploadError && <p role="alert" className="w-full text-sm text-destructive">{uploadError}</p>}
         {restaurant.status_detail && (
           <p className="w-full text-sm text-destructive">{restaurant.status_detail}</p>
         )}

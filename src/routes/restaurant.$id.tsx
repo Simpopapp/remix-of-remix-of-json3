@@ -1,15 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { queryOptions, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { advanceRestaurant } from "@/lib/functions/tick.functions";
+import { advanceRestaurant } from "@/lib/guest-api";
 import {
   deleteItem,
   getReviewData,
   mergeItems,
   updateItem,
-} from "@/lib/functions/items.functions";
-import { exportMenuCsv, exportMenuJson } from "@/lib/functions/export.functions";
+} from "@/lib/guest-api";
+import { exportMenuCsv, exportMenuJson } from "@/lib/guest-api";
 import { STATUS_LABEL } from "@/lib/contracts/pipeline";
 import type { MenuItemRow, SourceImageRow } from "@/lib/contracts/types";
 import { Button } from "@/components/ui/button";
@@ -24,7 +23,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export const Route = createFileRoute("/_authenticated/restaurant/$id")({
+export const Route = createFileRoute("/restaurant/$id")({
+  // Guest records exist only in this browser; the server cannot resolve them.
+  ssr: false,
   head: (ctx) => {
     const restaurant = (ctx.loaderData as { restaurant?: { name: string } } | undefined)?.restaurant;
     const title = restaurant ? `Revisão — ${restaurant.name}` : "Revisão — MapsMenu";
@@ -79,10 +80,7 @@ function ReviewPage() {
     async function sign() {
       const next: Record<string, string> = {};
       for (const image of data.images) {
-        const { data: signed } = await supabase.storage
-          .from("menu-images")
-          .createSignedUrl(image.storage_path, 3600);
-        if (signed?.signedUrl) next[image.id] = signed.signedUrl;
+        next[image.id] = image.storage_path;
       }
       if (!cancelled) setUrls(next);
     }

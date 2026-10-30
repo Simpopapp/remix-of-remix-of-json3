@@ -17,3 +17,6 @@ tanto pelas server fns autenticadas quanto pelo tick, que injeta
 
 ## RD-08 — Client-safe RPC boundaries
 Keep client-imported server functions in `src/lib/functions` and shared contracts in `src/lib/contracts`; load processing cores from handler bodies so `src/server` stays out of the browser import graph.
+
+## RD-09 — Login-free workspace isolation
+Public dashboard/review use browser-local guest workspaces; public processing accepts caller-supplied images or gallery requests, never private database IDs. Keep existing owner-scoped server functions authenticated to avoid exposing previous account data.

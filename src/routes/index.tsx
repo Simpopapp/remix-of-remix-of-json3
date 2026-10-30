@@ -1,8 +1,9 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export const Route = createFileRoute("/")({
+  beforeLoad: () => { throw redirect({ to: "/dashboard" }); },
   head: () => ({
     meta: [
       { title: "MapsMenu — cardápio estruturado a partir do Google Maps" },
