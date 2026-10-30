@@ -153,16 +153,18 @@ function RestaurantCard({ restaurant }: { restaurant: RestaurantRow }) {
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const canReview = restaurant.status === "aguardando_revisao" || restaurant.status === "concluido";
 
   async function handleUpload(files: FileList | null) {
     if (!files || files.length === 0) return;
     setUploading(true);
+    setUploadError(null);
     try {
       await uploadGuestFiles(restaurant.id, Array.from(files));
       await queryClient.invalidateQueries({ queryKey: ["restaurants"] });
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Falha no envio das imagens");
+      setUploadError(e instanceof Error ? e.message : "Falha no envio das imagens");
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -181,6 +183,7 @@ function RestaurantCard({ restaurant }: { restaurant: RestaurantRow }) {
         </Badge>
       </CardHeader>
       <CardContent className="flex flex-wrap items-center gap-2">
+        {uploadError && <p role="alert" className="w-full text-sm text-destructive">{uploadError}</p>}
         {restaurant.status_detail && (
           <p className="w-full text-sm text-destructive">{restaurant.status_detail}</p>
         )}

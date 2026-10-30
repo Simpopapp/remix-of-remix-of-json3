@@ -9,7 +9,9 @@ export const readGuestImage = createServerFn({ method: "POST" })
     const { createVisionGateway } = await import("@/server/vision/gateway");
     const { MENU_READ_INSTRUCTIONS, imageReadSchema, toImageReadResult } = await import("@/server/vision/schema");
     const { model } = createVisionGateway();
+    let processingError: unknown;
     const result = streamText({ model, instructions: MENU_READ_INSTRUCTIONS,
+      onError: ({ error }) => { processingError = error; },
       messages: [{ role: "user", content: [{ type: "image", image: new URL(data.image) }, { type: "text", text: "Leia esta foto de cardápio." }] }],
       output: Output.object({ schema: imageReadSchema }),
       providerOptions: { openai: { forceReasoning: true, reasoningEffort: "low", reasoningSummary: "auto", store: false, include: ["reasoning.encrypted_content"] } },
@@ -17,7 +19,7 @@ export const readGuestImage = createServerFn({ method: "POST" })
     try { return toImageReadResult(await result.output); }
     catch (error) {
       const { safeGatewayMessage } = await import("@/server/vision/gateway");
-      throw new Error(safeGatewayMessage(error));
+      throw new Error(safeGatewayMessage(processingError ?? error));
     }
   });
 

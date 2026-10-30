@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/select";
 
 export const Route = createFileRoute("/restaurant/$id")({
+  // Guest records exist only in this browser; the server cannot resolve them.
+  ssr: false,
   head: (ctx) => {
     const restaurant = (ctx.loaderData as { restaurant?: { name: string } } | undefined)?.restaurant;
     const title = restaurant ? `Revisão — ${restaurant.name}` : "Revisão — MapsMenu";
