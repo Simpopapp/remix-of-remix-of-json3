@@ -1,4 +1,5 @@
-import { MapsGalleryProvider, validateGalleryRequest } from "./provider";
+import { validateGalleryRequest } from "./provider";
+import type { MapsGalleryProvider } from "./provider";
 import { HttpMapsGalleryProvider } from "./http-provider";
 
 /**
@@ -15,8 +16,8 @@ export async function fetchGallery(request: Parameters<MapsGalleryProvider["fetc
   return provider.fetchGallery(request);
 }
 
+export type { MapsGalleryProvider } from "./provider";
 export {
-  MapsGalleryProvider,
   ScraperConfigError,
   ScraperUnavailableError,
   validateGalleryRequest,
