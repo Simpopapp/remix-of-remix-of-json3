@@ -25,5 +25,5 @@ export const collectGuestGallery = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => z.object({ mapsUrl: z.string().max(2048).optional(), name: z.string().max(300).optional(), city: z.string().max(300).optional() }).parse(input))
   .handler(async ({ data }) => {
     const { fetchGallery } = await import("@/server/scraping/index");
-    return fetchGallery(data);
+    return fetchGallery({ ...(data.mapsUrl ? { mapsUrl: data.mapsUrl } : {}), ...(data.name ? { name: data.name } : {}), ...(data.city ? { city: data.city } : {}) });
   });
